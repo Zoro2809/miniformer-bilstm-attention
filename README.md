@@ -31,9 +31,7 @@
 
 ## Overview
 
-This repository contains the complete TensorFlow 2.19.0 implementation of the Mini-Former architecture proposed in the research paper "Efficient Machine Translation with a BiLSTM-Attention Approach" by Yuxu Wu and Yiren Xing (arXiv:2410.22335, October 2024). The original paper implements Mini-Former using the MindSpore framework developed by Huawei. Since MindSpore is not compatible with Google Colab T4 GPU, this repository re-implements the exact same architecture in TensorFlow 2.19.0 for full reproducibility.
-
-The assignment covers a complete pipeline from paper review to code implementation, training, evaluation, and comparative analysis of encoder-decoder models with and without the attention mechanism on an English-German translation task.
+This repository contains the complete TensorFlow 2.19.0 implementation of the Mini-Former architecture proposed in the research paper "Efficient Machine Translation with a BiLSTM-Attention Approach" by Yuxu Wu and Yiren Xing (arXiv:2410.22335, October 2024). The original paper implements Mini-Former using the MindSpore framework developed by Huawei. Since MindSpore is not compatible with Google Colab T4 GPU, this repository re-implements the exact same architecture in TensorFlow 2.19.0 for full reproducibility. The assignment covers a complete pipeline from paper review to code implementation, training, evaluation, and comparative analysis of encoder-decoder models with and without the attention mechanism on an English-German translation task.
 
 ---
 
@@ -48,20 +46,33 @@ The Mini-Former model proposes a novel Seq2Seq architecture that:
 
 Original paper results on WMT14 English-German:
 
-Metric     | Transformer | Mini-Former
------------|-------------|------------
-BLEU-1     | 0.39        | 0.42
-BLEU-2     | 0.20        | 0.22
-BLEU-3     | 0.12        | 0.14
-BLEU-4     | 0.07        | 0.09
-ROUGE-1 F1 | 0.47        | 0.49
-ROUGE-2 F1 | 0.23        | 0.25
-ROUGE-L F1 | 0.45        | 0.46
-Model Size | 100%        | 40%
+| Metric     | Transformer | Mini-Former |
+|------------|-------------|-------------|
+| BLEU-1     | 0.39        | 0.42        |
+| BLEU-2     | 0.20        | 0.22        |
+| BLEU-3     | 0.12        | 0.14        |
+| BLEU-4     | 0.07        | 0.09        |
+| ROUGE-1 F1 | 0.47        | 0.49        |
+| ROUGE-2 F1 | 0.23        | 0.25        |
+| ROUGE-L F1 | 0.45        | 0.46        |
+| Model Size | 100%        | 40%         |
 
 ---
 
+## Repository Structure
+miniformer-bilstm-attention/
+│
+├── README.md
+├── requirements.txt
+├── DL_6.ipynb
+├── report/
+│   └── Assignment_Report.pdf
+└── images/
+├── training_loss_attention.png
+├── loss_comparison.png
+└── bleu_comparison.png
 
+---
 
 ## Model Architecture
 
@@ -102,24 +113,53 @@ AttnScores = softmax( (Dec_out x Enc_out) / sqrt(d) )
 Context    = AttnScores x Enc_outputs
 Output     = tanh( Linear( concat(Context, Dec_hidden) ) )
 
+---
+
+## LSTM Mathematical Model
+
+### 1. Forget Gate
+ft = sigmoid(Wf . [h(t-1), x(t)] + bf)
+Decides what information to forget from the cell state
+
+### 2. Input Gate
+it = sigmoid(Wi . [h(t-1), x(t)] + bi)
+Ce_t = tanh(Wc . [h(t-1), x(t)] + bC)
+Decides what new information to store in memory
+
+### 3. Cell State Update
+Ct = ft * C(t-1) + it * Ce_t
+Carries long term context across the entire sequence
+
+### 4. Output Gate
+ot = sigmoid(Wo . [h(t-1), x(t)] + bo)
+ht = ot * tanh(Ct)
+Produces hidden state passed to next step or decoder
+
+### 5. BiLSTM Encoding
+Forward LSTM processes sequence left to right
+Backward LSTM processes sequence right to left
+Both hidden states are concatenated: h = concat(h_fwd, h_bwd)
+This gives full bidirectional context for every source token
 
 ---
 
 ## Hyperparameters
 
-Parameter           | Value | Source
---------------------|-------|-----------------------------
-Embedding dimension | 128   | train_seq2seqsum.py (paper)
-Hidden units        | 256   | train_seq2seqsum.py (paper)
-Encoder type        | BiLSTM| Seq2Seq.py (paper)
-Attention type      | Luong | Seq2Seq.py (paper)
-Optimizer           | Adam  | utils.py (paper)
-Learning rate       | 0.001 | train_seq2seqsum.py (paper)
-Batch size          | 64    | train_seq2seqsum.py (paper)
-Gradient clip norm  | 5.0   | utils.py (paper)
-Max sequence length | 20    | this implementation
-Training epochs     | 15    | this implementation
-Beam search size    | 50    | decode.py (paper)
+| Parameter                  | Value | Source                      |
+|----------------------------|-------|-----------------------------|
+| Embedding dimension        | 128   | train_seq2seqsum.py (paper) |
+| Hidden units               | 256   | train_seq2seqsum.py (paper) |
+| Encoder type               | BiLSTM| Seq2Seq.py (paper)          |
+| Attention type             | Luong | Seq2Seq.py (paper)          |
+| Optimizer                  | Adam  | utils.py (paper)            |
+| Learning rate              | 0.001 | train_seq2seqsum.py (paper) |
+| Batch size (Part 2 sample) | 8     | this implementation         |
+| Batch size (Part 3 large)  | 64    | this implementation         |
+| Gradient clip norm         | 5.0   | utils.py (paper)            |
+| Max sequence length        | 20    | this implementation         |
+| Epochs (Part 2 sample)     | 100   | this implementation         |
+| Epochs (Part 3 large)      | 15    | this implementation         |
+| Beam search size           | 50    | decode.py (paper)           |
 
 ---
 
@@ -133,7 +173,12 @@ Beam search size    | 50    | decode.py (paper)
 - Split: 4:1 train to test ratio
 - Download: https://aistudio.baidu.com/datasetdetail/1999
 
-### This Implementation Dataset
+### Part 2 Sample Dataset
+- 30 manually created English-German sentence pairs
+- Used for initial model demonstration and verification
+- Model trained for 100 epochs achieving 100 percent accuracy
+
+### Part 3 Large Dataset
 - Name: opus_books English-German
 - Source: Helsinki-NLP/opus_books via Hugging Face Datasets
 - Total pairs available: 51,467
@@ -151,14 +196,14 @@ Beam search size    | 50    | decode.py (paper)
 The official MindSpore implementation was studied from:
 https://github.com/mindspore-lab/models/tree/master/research/arxiv_papers/miniformer
 
-File                 | Purpose
----------------------|--------------------------------------------------
-Seq2Seq.py           | MiniFormer and Decoder class with attention
-data.py              | GigaDataset class for WMT14 data loading
-train_seq2seqsum.py  | Main training script with Adam optimizer
-decode.py            | Beam search inference with beam size 50
-eval.py              | BLEU and ROUGE evaluation script
-utils.py             | Trainer class with training loop and checkpointing
+| File                | Purpose                                               |
+|---------------------|-------------------------------------------------------|
+| Seq2Seq.py          | MiniFormer and Decoder class with attention mechanism |
+| data.py             | GigaDataset class for WMT14 data loading              |
+| train_seq2seqsum.py | Main training script with Adam optimizer              |
+| decode.py           | Beam search inference with beam size 50               |
+| eval.py             | BLEU and ROUGE evaluation script                      |
+| utils.py            | Trainer class with training loop and checkpointing    |
 
 ---
 
@@ -166,32 +211,32 @@ utils.py             | Trainer class with training loop and checkpointing
 
 ### Part 2 — With Attention Model on Sample Dataset (30 sentences, 100 epochs)
 
-Metric      | Score
-------------|-------
-Final Loss  | 0.0091
-BLEU-1      | 1.0000
-BLEU-2      | 1.0000
-BLEU-3      | 0.9100
-BLEU-4      | 0.5800
-Corpus BLEU | 0.8522
-Accuracy    | 100%
-GPU         | Tesla T4
-Framework   | TensorFlow 2.19.0
+| Metric      | Score  |
+|-------------|--------|
+| Final Loss  | 0.0091 |
+| BLEU-1      | 1.0000 |
+| BLEU-2      | 1.0000 |
+| BLEU-3      | 0.9100 |
+| BLEU-4      | 0.5800 |
+| Corpus BLEU | 0.8522 |
+| Accuracy    | 100%   |
+| GPU         | Tesla T4 |
+| Framework   | TensorFlow 2.19.0 |
 
 ### Part 3 — Comparison on Large Dataset (9930 sentences, 15 epochs)
 
-Metric                  | Without Attention | With Attention
-------------------------|-------------------|---------------
-Final Loss              | 4.2890            | 4.1376
-BLEU-1                  | 0.0888            | 0.0911
-BLEU-2                  | 0.0137            | 0.0199
-BLEU-3                  | 0.0089            | 0.0093
-BLEU-4                  | 0.0111            | 0.0124
-Training Time (seconds) | 466.0             | 872.7
-Model Parameters        | 8,941,006         | 9,925,326
-Encoder Type            | Simple LSTM       | BiLSTM
-Attention Mechanism     | None              | Luong
-Output Quality          | Repetitive        | More aligned
+| Metric                  | Without Attention | With Attention |
+|-------------------------|-------------------|----------------|
+| Final Loss              | 4.2890            | 4.1376         |
+| BLEU-1                  | 0.0888            | 0.0911         |
+| BLEU-2                  | 0.0137            | 0.0199         |
+| BLEU-3                  | 0.0089            | 0.0093         |
+| BLEU-4                  | 0.0111            | 0.0124         |
+| Training Time (seconds) | 466.0             | 872.7          |
+| Model Parameters        | 8,941,006         | 9,925,326      |
+| Encoder Type            | Simple LSTM       | BiLSTM         |
+| Attention Mechanism     | None              | Luong          |
+| Output Quality          | Repetitive        | More aligned   |
 
 ---
 
@@ -207,7 +252,22 @@ Output Quality          | Repetitive        | More aligned
 
 5. Our BLEU scores are lower than the paper's reported results due to smaller dataset size (7,944 vs millions of sentences), fewer training epochs (15 vs full convergence), word-level tokenization instead of subword tokenization, and greedy decoding instead of beam search with beam size 50.
 
-6. The parameter difference between both models is 984,320 parameters — these are the attention projection layer, concatenation layer, and associated weights. This shows the attention mechanism adds a modest number of parameters but delivers meaningful quality improvements.
+6. The parameter difference between both models is 984,320 parameters which are the attention projection layer, concatenation layer, and associated weights. This shows the attention mechanism adds a modest number of parameters but delivers meaningful quality improvements.
+
+---
+## File Description
+
+| File                              | Description                                        |
+|-----------------------------------|----------------------------------------------------|
+| DL_6.ipynb                        | Complete Colab notebook with all 25 cells          |
+| requirements.txt                  | All Python library versions used                   |
+| report/Assignment_Report.pdf      | Complete assignment report covering all 5 parts    |
+
+
+
+
+
+
 
 ---
 
