@@ -57,20 +57,6 @@ Original paper results on WMT14 English-German:
 | ROUGE-L F1 | 0.45        | 0.46        |
 | Model Size | 100%        | 40%         |
 
----
-
-## Repository Structure
-miniformer-bilstm-attention/
-│
-├── README.md
-├── requirements.txt
-├── DL_6.ipynb
-├── report/
-│   └── Assignment_Report.pdf
-└── images/
-├── training_loss_attention.png
-├── loss_comparison.png
-└── bleu_comparison.png
 
 ---
 
